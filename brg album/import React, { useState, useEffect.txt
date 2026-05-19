@@ -1,0 +1,1117 @@
+import React, { useState, useEffect } from 'react';
+import { initializeApp } from 'firebase/app';
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  setDoc, 
+  onSnapshot, 
+  updateDoc 
+} from 'firebase/firestore';
+import { 
+  getAuth, 
+  signInAnonymously, 
+  signInWithCustomToken, 
+  onAuthStateChanged 
+} from 'firebase/auth';
+
+// --- CONFIGURAÇÃO DO FIREBASE ---
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyCv-SYD0uIXd4N5st-TTyTHQYI8elBhqdc",
+  authDomain: "star-cards-f36e9.firebaseapp.com",
+  projectId: "star-cards-f36e9",
+  storageBucket: "star-cards-f36e9.firebasestorage.app",
+  messagingSenderId: "697398829358",
+  appId: "1:697398829358:web:77bca1e1ec52b493f85abf"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'album-coletivo-stars';
+
+// --- BONEQUINHAS ILUSTRADAS EM VETOR (SVG) DE ALTA DEFINIÇÃO ---
+const AVATARS_LIST = [
+  { 
+    id: "pink_sailor", 
+    label: "Colegial Rosa (Pink Sailor)", 
+    color: "from-pink-500 to-rose-700",
+    svg: (
+      <svg viewBox="0 0 100 100" className="w-full h-full">
+        <circle cx="50" cy="50" r="48" fill="#fbcfe8" stroke="#f43f5e" strokeWidth="2" />
+        {/* Cabelo de Trás */}
+        <path d="M20 50 C20 20, 80 20, 80 50 C80 52, 20 52, 20 50" fill="#ec4899" />
+        {/* Rosto */}
+        <circle cx="50" cy="50" r="28" fill="#fde047" opacity="0.3" />
+        <circle cx="50" cy="48" r="25" fill="#fef08a" />
+        {/* Olhos e Bochechas */}
+        <circle cx="42" cy="45" r="3" fill="#1e293b" />
+        <circle cx="58" cy="45" r="3" fill="#1e293b" />
+        <circle cx="39" cy="50" r="4" fill="#f43f5e" opacity="0.4" />
+        <circle cx="61" cy="50" r="4" fill="#f43f5e" opacity="0.4" />
+        <path d="M46 54 Q50 58 54 54" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" fill="none" />
+        {/* Cabelo da Frente (Franja Estilizada) */}
+        <path d="M22 45 C30 25, 45 25, 50 38 C55 25, 70 25, 78 45 C75 30, 25 30, 22 45" fill="#db2777" />
+        {/* Totós / Rabos de Cavalo */}
+        <circle cx="20" cy="30" r="10" fill="#ec4899" />
+        <circle cx="80" cy="30" r="10" fill="#ec4899" />
+        <circle cx="20" cy="30" r="6" fill="#f43f5e" />
+        <circle cx="80" cy="30" r="6" fill="#f43f5e" />
+        {/* Gola de Marinheiro */}
+        <path d="M30 72 L50 88 L70 72 L50 68 Z" fill="#1e3a8a" />
+        <path d="M40 72 L50 82 L60 72 Z" fill="#ffffff" />
+        <circle cx="50" cy="74" r="4" fill="#ef4444" /> {/* Lenço Vermelho */}
+      </svg>
+    )
+  },
+  { 
+    id: "blue_copa", 
+    label: "Copacabana Turquesa", 
+    color: "from-cyan-400 to-indigo-700",
+    svg: (
+      <svg viewBox="0 0 100 100" className="w-full h-full">
+        <circle cx="50" cy="50" r="48" fill="#cffafe" stroke="#06b6d4" strokeWidth="2" />
+        {/* Cabelo Curto Bob Turquesa */}
+        <path d="M22 45 C22 20, 78 20, 78 45 L78 68 L70 68 L68 45 L32 45 L30 68 L22 68 Z" fill="#06b6d4" />
+        {/* Rosto */}
+        <circle cx="50" cy="48" r="24" fill="#fef08a" />
+        {/* Olhos com maquilhagem escura das fotos */}
+        <ellipse cx="41" cy="45" rx="4" ry="2.5" fill="#0f172a" />
+        <ellipse cx="59" cy="45" rx="4" ry="2.5" fill="#0f172a" />
+        <circle cx="41" cy="45" r="1.5" fill="#ffffff" />
+        <circle cx="59" cy="45" r="1.5" fill="#ffffff" />
+        <circle cx="38" cy="50" r="3.5" fill="#ec4899" opacity="0.3" />
+        <circle cx="62" cy="50" r="3.5" fill="#ec4899" opacity="0.3" />
+        <path d="M47 54 Q50 57 53 54" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" fill="none" />
+        {/* Tatuagem de estrela no rosto do Sunday City */}
+        <path d="M34 44 L35 46 L37 46 L35 47 L36 49 L34 48 L32 49 L33 47 L31 46 L33 46 Z" fill="#0f172a" />
+        {/* Gargantilha Preta */}
+        <rect x="42" y="66" width="16" height="4" rx="1" fill="#0f172a" />
+        {/* Top Preto de Alças */}
+        <path d="M32 72 L68 72 L64 92 L36 92 Z" fill="#1e293b" />
+        <path d="M38 72 L36 90 M62 72 L64 90" stroke="#0f172a" strokeWidth="2" />
+      </svg>
+    )
+  },
+  { 
+    id: "cargo_lilac", 
+    label: "Lilás Alternativa (Cargo)", 
+    color: "from-fuchsia-500 to-indigo-800",
+    svg: (
+      <svg viewBox="0 0 100 100" className="w-full h-full">
+        <circle cx="50" cy="50" r="48" fill="#f3e8ff" stroke="#a855f7" strokeWidth="2" />
+        {/* Cabelo Comprido Ondulado Lilás */}
+        <path d="M20 40 C20 15, 80 15, 80 40 C80 65, 74 80, 74 88 L26 88 C26 80, 20 65, 20 40" fill="#c084fc" />
+        <circle cx="50" cy="48" r="24" fill="#fed7aa" />
+        {/* Detalhes do Cabelo (Franja Lateral) */}
+        <path d="M24 35 C35 25, 65 20, 74 38 C60 25, 35 28, 24 35" fill="#a855f7" />
+        {/* Olhos e Boca */}
+        <circle cx="42" cy="46" r="3" fill="#1e293b" />
+        <circle cx="58" cy="46" r="3" fill="#1e293b" />
+        <path d="M46 54 Q50 59 54 54" stroke="#1e293b" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+        {/* Piercing Labial */}
+        <circle cx="46" cy="55" r="1.5" fill="#cbd5e1" />
+        {/* Roupa Estilo Colete Militar / Alças */}
+        <path d="M30 72 L70 72 L66 90 L34 90 Z" fill="#312e81" />
+        <path d="M40 72 L42 90 M60 72 L58 90" stroke="#4f46e5" strokeWidth="3" />
+      </svg>
+    )
+  },
+  { 
+    id: "school_blazer", 
+    label: "Estudante Executiva", 
+    color: "from-red-500 to-slate-900",
+    svg: (
+      <svg viewBox="0 0 100 100" className="w-full h-full">
+        <circle cx="50" cy="50" r="48" fill="#ffe4e6" stroke="#be123c" strokeWidth="2" />
+        {/* Cabelo Preto Longo Liso */}
+        <path d="M24 38 C24 15, 76 15, 76 38 L76 85 L68 85 L68 45 L32 45 L32 85 L24 85 Z" fill="#1e293b" />
+        <circle cx="50" cy="46" r="23" fill="#ffedd5" />
+        {/* Franja reta clássica japonesa */}
+        <path d="M26 36 L74 36 L70 42 L30 42 Z" fill="#0f172a" />
+        {/* Olhos grandes com brilho e sorriso tímido */}
+        <ellipse cx="42" cy="45" rx="3.5" ry="4" fill="#0f172a" />
+        <ellipse cx="58" cy="45" rx="3.5" ry="4" fill="#0f172a" />
+        <circle cx="43" cy="43" r="1" fill="#ffffff" />
+        <circle cx="59" cy="43" r="1" fill="#ffffff" />
+        <path d="M47 53 Q50 56 53 53" stroke="#be123c" strokeWidth="2" strokeLinecap="round" fill="none" />
+        {/* Blazer Escolar com gravata borboleta */}
+        <path d="M30 68 L70 68 L66 92 L34 92 Z" fill="#991b1b" />
+        <path d="M42 68 L50 80 L58 68 Z" fill="#ffffff" />
+        {/* Gravata de Laço Vermelha */}
+        <path d="M45 70 L55 74 L45 78 Z" fill="#dc2626" />
+        <path d="M55 70 L45 74 L55 78 Z" fill="#dc2626" />
+      </svg>
+    )
+  },
+  { 
+    id: "cap_sunset", 
+    label: "Loira do Boné", 
+    color: "from-yellow-400 to-red-650",
+    svg: (
+      <svg viewBox="0 0 100 100" className="w-full h-full">
+        <circle cx="50" cy="50" r="48" fill="#fef3c7" stroke="#d97706" strokeWidth="2" />
+        {/* Cabelo comprido ondulado loiro mel */}
+        <path d="M22 40 C22 15, 78 15, 78 40 L78 88 L22 88 Z" fill="#f59e0b" />
+        <circle cx="50" cy="48" r="23" fill="#ffedd5" />
+        <circle cx="42" cy="46" r="3" fill="#1e293b" />
+        <circle cx="58" cy="46" r="3" fill="#1e293b" />
+        <path d="M46 54 Q50 58 54 54" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" fill="none" />
+        {/* Boné virado para trás estilizado das fotos */}
+        <path d="M27 34 C27 20, 73 20, 73 34 Z" fill="#111827" />
+        <path d="M20 34 L80 34 L74 38 L26 38 Z" fill="#1f2937" />
+        {/* Logótipo Sunday City amarelo no boné */}
+        <circle cx="50" cy="27" r="4" fill="#fbbf24" />
+        {/* Brincos de Argola de Ouro */}
+        <circle cx="25" cy="52" r="5" stroke="#fbbf24" strokeWidth="2.5" fill="none" />
+        <circle cx="75" cy="52" r="5" stroke="#fbbf24" strokeWidth="2.5" fill="none" />
+      </svg>
+    )
+  },
+  { 
+    id: "blonde_copa", 
+    label: "Verão de Óculos Sol", 
+    color: "from-amber-300 to-orange-600",
+    svg: (
+      <svg viewBox="0 0 100 100" className="w-full h-full">
+        <circle cx="50" cy="50" r="48" fill="#fffbeb" stroke="#f59e0b" strokeWidth="2" />
+        {/* Cabelo Loiro Platinado Curto */}
+        <path d="M22 42 C22 15, 78 15, 78 42 L78 70 L22 70 Z" fill="#fef08a" />
+        <circle cx="50" cy="48" r="23" fill="#ffedd5" />
+        {/* Óculos de sol gatinho pretos icónicos */}
+        <path d="M28 42 L48 42 L44 50 L32 50 Z" fill="#0f172a" />
+        <path d="M52 42 L72 42 L68 50 L56 50 Z" fill="#0f172a" />
+        <rect x="46" y="43" width="8" height="2" fill="#0f172a" />
+        <path d="M30 44 L40 44" stroke="#ffffff" strokeWidth="1" opacity="0.6" />
+        <path d="M54 44 L64 44" stroke="#ffffff" strokeWidth="1" opacity="0.6" />
+        {/* Boca com Batom Vermelho marcante */}
+        <path d="M45 55 Q50 60 55 55" stroke="#dc2626" strokeWidth="3" strokeLinecap="round" fill="none" />
+        {/* Lenço no cabelo ou colar */}
+        <path d="M28 72 L72 72 L66 88 L34 88 Z" fill="#ec4899" />
+      </svg>
+    )
+  }
+];
+
+// --- ESTRUTURA COMPLETA E ORDENADA DOS 12 ÁLBUNS DO JOGO ---
+const ALBUMS_DATA = {
+  "Tem Ritmo?": {
+    reward: "4M",
+    color: "from-pink-500 to-purple-600",
+    cards: [
+      { id: "tr1", name: "Bora, Time!", stars: 1, icon: "📣" },
+      { id: "tr2", name: "Luzes do Palco", stars: 1, icon: "💡" },
+      { id: "tr3", name: "Grande Prémio", stars: 1, icon: "🏁" },
+      { id: "tr4", name: "Dança do Ventre", stars: 1, icon: "💃" },
+      { id: "tr5", name: "Boot Scoot", stars: 1, icon: "👢" },
+      { id: "tr6", name: "Pole Dance", stars: 2, icon: "👠" },
+      { id: "tr7", name: "Bate-Pé", stars: 1, icon: "👞" },
+      { id: "tr8", name: "Noite de Cabaré", stars: 1, icon: "🎭" },
+      { id: "tr9", name: "Hora da Hula", stars: 1, icon: "🌴" },
+      { id: "tr10", name: "Kabuki", stars: 2, icon: "👺" },
+      { id: "tr11", name: "Balé", stars: 1, icon: "🩰" },
+      { id: "tr12", name: "Disco", stars: 2, icon: "🪩" }
+    ]
+  },
+  "Arrasa!": {
+    reward: "5M",
+    color: "from-purple-600 to-indigo-700",
+    cards: [
+      { id: "ar1", name: "Manda Ver!", stars: 2, icon: "🎤" },
+      { id: "ar2", name: "Fone de Ouvido", stars: 1, icon: "🎧" },
+      { id: "ar3", name: "Caixa de Som", stars: 2, icon: "📻" },
+      { id: "ar4", name: "Bateria", stars: 2, icon: "🥁" },
+      { id: "ar5", name: "Guitarra", stars: 1, icon: "🎸" },
+      { id: "ar6", name: "Disco de Vinil", stars: 2, icon: "💿" },
+      { id: "ar7", name: "Jaqueta Couro", stars: 1, icon: "🧥" },
+      { id: "ar8", name: "Cartaz", stars: 1, icon: "🖼️" },
+      { id: "ar9", name: "All Stars", stars: 2, icon: "👟" },
+      { id: "ar10", name: "Baquetas", stars: 1, icon: "🥢" },
+      { id: "ar11", name: "Teclado", stars: 3, icon: "🎹" },
+      { id: "ar12", name: "Spikes", stars: 3, icon: "😈" }
+    ]
+  },
+  "Corrida": {
+    reward: "6M",
+    color: "from-orange-500 to-red-650",
+    cards: [
+      { id: "cr1", name: "Material", stars: 2, icon: "🧰" },
+      { id: "cr2", name: "Jaqueta Corrida", stars: 1, icon: "🧥" },
+      { id: "cr3", name: "Tampa de Corrida", stars: 1, icon: "Cap" },
+      { id: "cr4", name: "Cone de Trânsito", stars: 1, icon: "🚧" },
+      { id: "cr5", name: "Luvas de Corrida", stars: 2, icon: "🧤" },
+      { id: "cr6", name: "Galão", stars: 1, icon: "🛢️" },
+      { id: "cr7", name: "Linha de Chegada", stars: 1, icon: "🏁" },
+      { id: "cr8", name: "Volante", stars: 1, icon: "🚗" },
+      { id: "cr9", name: "Vitória Obtida", stars: 2, icon: "🥇" },
+      { id: "cr10", name: "Banco do Piloto", stars: 2, icon: "💺" },
+      { id: "cr11", name: "Troféu Corrida", stars: 3, icon: "🏆" },
+      { id: "cr12", name: "Pneus de Pit Stop", stars: 3, icon: "🛞" }
+    ]
+  },
+  "Animais Famosos": {
+    reward: "7M",
+    color: "from-teal-500 to-cyan-600",
+    cards: [
+      { id: "af1", name: "Ouriço Estiloso", stars: 1, icon: "🦔" },
+      { id: "af2", name: "Gatinha Vlogger", stars: 2, icon: "🐱" },
+      { id: "af3", name: "Coelho Famoso", stars: 2, icon: "🐰" },
+      { id: "af4", name: "Repórter Canino", stars: 2, icon: "🐶" },
+      { id: "af5", name: "Dupla Marcante", stars: 2, icon: "🦜" },
+      { id: "af6", name: "Hamster Corredor", stars: 1, icon: "🐹" },
+      { id: "af7", name: "Gato na Caixa", stars: 1, icon: "📦" },
+      { id: "af8", name: "Porco das Redes", stars: 3, icon: "🐷" },
+      { id: "af9", name: "Estrela Ascensão", stars: 3, icon: "🐕" },
+      { id: "af10", name: "Roedor Glorioso", stars: 2, icon: "🐀" },
+      { id: "af11", name: "Iguana Gamer", stars: 2, icon: "🦎" },
+      { id: "af12", name: "Shiba no Spa", stars: 3, icon: "🐕" }
+    ]
+  },
+  "Vida com Estilo": {
+    reward: "8M",
+    color: "from-yellow-500 to-amber-600",
+    cards: [
+      { id: "ve1", name: "Cofre Privado", stars: 2, icon: "🏦" },
+      { id: "ve2", name: "Relógio de Ouro", stars: 1, icon: "⌚" },
+      { id: "ve3", name: "Monte de Tesouro", stars: 1, icon: "💎" },
+      { id: "ve4", name: "Celular Dourado", stars: 2, icon: "📱" },
+      { id: "ve5", name: "Anel de Sinete", stars: 1, icon: "💍" },
+      { id: "ve6", name: "Ouro Puro", stars: 3, icon: "🪙" },
+      { id: "ve7", name: "Árvore de Grana", stars: 3, icon: "🌳" },
+      { id: "ve8", name: "Brunch Nota 10", stars: 3, icon: "🥂" },
+      { id: "ve9", name: "Mega Mansão", stars: 2, icon: "🏰" },
+      { id: "ve10", name: "Muitas Joias", stars: 3, icon: "💎" },
+      { id: "ve11", name: "Cripto Moedas", stars: 3, icon: "🪙" },
+      { id: "ve12", name: "Volante Riquinho", stars: 4, icon: "🏎️" }
+    ]
+  },
+  "Lar dos Livros": {
+    reward: "9M",
+    color: "from-amber-600 to-orange-700",
+    cards: [
+      { id: "ll1", name: "Manhã de Autor", stars: 1, icon: "✍️" },
+      { id: "ll2", name: "Primeira Versão", stars: 1, icon: "📄" },
+      { id: "ll3", name: "Pena e Tinta", stars: 1, icon: "✒️" },
+      { id: "ll4", name: "Pilha de Livros", stars: 2, icon: "📚" },
+      { id: "ll5", name: "Romance", stars: 3, icon: "📖" },
+      { id: "ll6", name: "História Policial", stars: 3, icon: "🕵️" },
+      { id: "ll7", name: "Clássico", stars: 3, icon: "📗" },
+      { id: "ll8", name: "Material Escrita", stars: 3, icon: "⌨️" },
+      { id: "ll9", name: "Lâmpada", stars: 4, icon: "💡" },
+      { id: "ll10", name: "Lista de Ideias", stars: 2, icon: "📝" },
+      { id: "ll11", name: "Óculos Velhos", stars: 3, icon: "👓" },
+      { id: "ll12", name: "Carta do Editor", stars: 3, icon: "✉️" }
+    ]
+  },
+  "Área dos Fãs": {
+    reward: "9M",
+    color: "from-rose-500 to-pink-600",
+    cards: [
+      { id: "df1", name: "Entradas do Show", stars: 1, icon: "🎟️" },
+      { id: "df2", name: "Caneta Luminosa", stars: 2, icon: "🖊️" },
+      { id: "df3", name: "Foto Assinada", stars: 2, icon: "📸" },
+      { id: "df4", name: "Crachá de Fã", stars: 2, icon: "🏷️" },
+      { id: "df5", name: "Memórias da Turnê", stars: 2, icon: "📖" },
+      { id: "df6", name: "Bastão de Luz", stars: 3, icon: "💡" },
+      { id: "df7", name: "Pulseira Borracha", stars: 3, icon: "⭕" },
+      { id: "df8", name: "Adesivos", stars: 3, icon: "🏷️" },
+      { id: "df9", name: "Camiseta", stars: 3, icon: "👕" },
+      { id: "df10", name: "Boné", stars: 3, icon: "🧢" },
+      { id: "df11", name: "Bebida", stars: 3, icon: "🥤" },
+      { id: "df12", name: "Caneca", stars: 3, icon: "🍺" }
+    ]
+  },
+  "Mundo da Moda": {
+    reward: "10M",
+    color: "from-fuchsia-500 to-pink-750",
+    cards: [
+      { id: "mm1", name: "Paleta Sombras", stars: 1, icon: "🎨" },
+      { id: "mm2", name: "Pinta Lábios", stars: 2, icon: "💄" },
+      { id: "mm3", name: "Pense Rosa", stars: 2, icon: "🌸" },
+      { id: "mm4", name: "Estação de Salto", stars: 3, icon: "👠" },
+      { id: "mm5", name: "Alta Costura", stars: 3, icon: "👗" },
+      { id: "mm6", name: "Cílios Postiços", stars: 3, icon: "👁️" },
+      { id: "mm7", name: "Fita Métrica", stars: 4, icon: "📏" },
+      { id: "mm8", name: "Pó Sedoso", stars: 3, icon: "💨" },
+      { id: "mm9", name: "Secador", stars: 3, icon: "💨" },
+      { id: "mm10", name: "Desfile", stars: 3, icon: "🚶‍♀️" },
+      { id: "mm11", name: "Bustos", stars: 3, icon: "🗿" },
+      { id: "mm12", name: "Revista de Moda", stars: 4, icon: "📖" }
+    ]
+  },
+  "Blog": {
+    reward: "11M",
+    color: "from-blue-500 to-indigo-650",
+    cards: [
+      { id: "bg1", name: "Anel de Led", stars: 2, icon: "⭕" },
+      { id: "bg2", name: "Selfie", stars: 3, icon: "🤳" },
+      { id: "bg3", name: "Teclas RGB", stars: 3, icon: "⌨️" },
+      { id: "bg4", name: "Ultra 8K", stars: 3, icon: "📺" },
+      { id: "bg5", name: "Câmera de Vlog", stars: 3, icon: "📹" },
+      { id: "bg6", name: "Mural", stars: 3, icon: "🖼️" },
+      { id: "bg7", name: "Tela Verde", stars: 4, icon: "🟩" },
+      { id: "bg8", name: "Microfone ASMR", stars: 3, icon: "🎙️" },
+      { id: "bg9", name: "Hiper Estímulo", stars: 3, icon: "⚡" },
+      { id: "bg10", name: "Encaixe USB", stars: 4, icon: "🔌" },
+      { id: "bg11", name: "Celular a Rodo", stars: 4, icon: "📱" },
+      { id: "bg12", name: "Prêmio Youcube", stars: 4, icon: "🏆" }
+    ]
+  },
+  "Ícones Pop": {
+    reward: "12M",
+    color: "from-purple-500 to-fuchsia-800",
+    cards: [
+      { id: "ip1", name: "Óculos de Diva", stars: 3, icon: "🕶️" },
+      { id: "ip2", name: "Luvas de Diva", stars: 3, icon: "🧤" },
+      { id: "ip3", name: "Sapatos Vistosos", stars: 3, icon: "👠" },
+      { id: "ip4", name: "Máscara Coelho", stars: 3, icon: "🐰" },
+      { id: "ip5", name: "Violão", stars: 3, icon: "🎸" },
+      { id: "ip6", name: "Sucesso em Vinil", stars: 3, icon: "💿" },
+      { id: "ip7", name: "Cinto Estrelas", stars: 4, icon: "⭐" },
+      { id: "ip8", name: "Botas de Palco", stars: 4, icon: "👢" },
+      { id: "ip9", name: "Corpete", stars: 4, icon: "👗" },
+      { id: "ip10", name: "Leque de Diva", stars: 4, icon: "🪭" },
+      { id: "ip11", name: "Bandana", stars: 4, icon: "🧣" },
+      { id: "ip12", name: "Chapéu Caubói", stars: 4, icon: "🤠" }
+    ]
+  },
+  "Caçador de Furos": {
+    reward: "14M",
+    color: "from-sky-500 to-slate-850",
+    cards: [
+      { id: "cf1", name: "Câmera", stars: 3, icon: "📷" },
+      { id: "cf2", name: "Lente", stars: 3, icon: "🔍" },
+      { id: "cf3", name: "Negativo", stars: 3, icon: "🎞️" },
+      { id: "cf4", name: "Bolsa de Couro", stars: 3, icon: "👜" },
+      { id: "cf5", name: "Sessão Secreta", stars: 3, icon: "🕵️" },
+      { id: "cf6", name: "Tabloide", stars: 3, icon: "📰" },
+      { id: "cf7", name: "Gravador de Voz", stars: 4, icon: "🎙️" },
+      { id: "cf8", name: "Quadro Fofocas", stars: 4, icon: "📋" },
+      { id: "cf9", name: "Arquivo Sujo", stars: 4, icon: "📁" },
+      { id: "cf10", name: "Fotos Famosos", stars: 4, icon: "📸" },
+      { id: "cf11", name: "Equip. Câmera", stars: 4, icon: "⚙️" },
+      { id: "cf12", name: "Van", stars: 4, icon: "🚐" }
+    ]
+  },
+  "Tapete Vermelho": {
+    reward: "17M",
+    color: "from-red-600 to-yellow-500",
+    cards: [
+      { id: "tv1", name: "Poder Estrelas", stars: 4, icon: "⭐" },
+      { id: "tv2", name: "Boa Chique", stars: 4, icon: "🧣" },
+      { id: "tv3", name: "Somente VIP", stars: 4, icon: "🎟️" },
+      { id: "tv4", name: "Passe VIP", stars: 4, icon: "🪪" },
+      { id: "tv5", name: "Colar", stars: 4, icon: "📿" },
+      { id: "tv6", name: "Bolsa Clutch", stars: 4, icon: "👛" },
+      { id: "tv7", name: "Vinho Fino", stars: 4, icon: "🍷" },
+      { id: "tv8", name: "Crachá Imprensa", stars: 4, icon: "🎤" },
+      { id: "tv9", name: "Vestido Noturno", stars: 4, icon: "👗" },
+      { id: "tv10", name: "Smoking", stars: 4, icon: "👔" },
+      { id: "tv11", name: "Brincos", stars: 4, icon: "💎" },
+      { id: "tv12", name: "Prêmio de Elite", stars: 4, icon: "🏆" }
+    ]
+  }
+};
+
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [currentUserProfile, setCurrentUserProfile] = useState(null);
+  
+  const [usernameInput, setUsernameInput] = useState('');
+  const [ingameNameInput, setIngameNameInput] = useState('');
+  const [gameTagInput, setGameTagInput] = useState('');
+  const [selectedAvatar, setSelectedAvatar] = useState('pink_sailor');
+  
+  const [groupProfiles, setGroupProfiles] = useState({});
+  const [activeAlbum, setActiveAlbum] = useState("Tem Ritmo?");
+  const [filterType, setFilterType] = useState("all"); 
+  const [notification, setNotification] = useState(null);
+  const [selectedUserToInspect, setSelectedUserToInspect] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+
+  // Detetive de cartas repetidas ao clicar
+  const [inspectedCardRepetitions, setInspectedCardRepetitions] = useState(null);
+
+  // 1. Inicialização e Login
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (error) {
+        console.error("Erro na ligação ao Firebase:", error);
+      }
+    };
+    initAuth();
+
+    const unsubscribe = onAuthStateChanged(auth, (usr) => {
+      if (usr) {
+        setUser(usr);
+        const savedName = localStorage.getItem('stars_username');
+        const savedIngame = localStorage.getItem('stars_ingame') || '';
+        const savedTag = localStorage.getItem('stars_tag') || '';
+        const savedAvatarId = localStorage.getItem('stars_avatar') || 'pink_sailor';
+        if (savedName) {
+          setUsernameInput(savedName);
+          setIngameNameInput(savedIngame);
+          setGameTagInput(savedTag);
+          setSelectedAvatar(savedAvatarId);
+          handleRegisterUser(savedName, savedIngame, savedTag, savedAvatarId, usr.uid);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 2. Ouvinte de dados em tempo real
+  useEffect(() => {
+    if (!user) return;
+    const groupCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
+    
+    const unsubscribe = onSnapshot(groupCollectionRef, (snapshot) => {
+      const profiles = {};
+      snapshot.forEach((doc) => {
+        profiles[doc.id] = doc.data();
+      });
+      setGroupProfiles(profiles);
+
+      if (profiles[user.uid]) {
+        const p = profiles[user.uid];
+        setCurrentUserProfile(p);
+        if(!isEditingProfile) {
+          setUsernameInput(p.username || '');
+          setIngameNameInput(p.ingameName || '');
+          setGameTagInput(p.gameTag || '');
+          setSelectedAvatar(p.avatarId || 'pink_sailor');
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, [user, isEditingProfile]);
+
+  const showNotification = (message, type = "success") => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  const copyToClipboard = (text) => {
+    const el = document.createElement('textarea');
+    el.value = text;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    showNotification(`Copiado: "${text}"!`);
+  };
+
+  const handleRegisterUser = async (
+    nameToRegister = usernameInput, 
+    ingameName = ingameNameInput, 
+    gameTag = gameTagInput, 
+    avatarId = selectedAvatar,
+    uid = user?.uid
+  ) => {
+    if (!nameToRegister.trim() || !uid) return;
+    
+    const cleanName = nameToRegister.trim();
+    const cleanIngame = ingameName.trim();
+    const cleanTag = gameTag.trim();
+    const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', uid);
+    
+    const initialCards = { ...(currentUserProfile?.cards || {}) };
+    Object.keys(ALBUMS_DATA).forEach(albumName => {
+      ALBUMS_DATA[albumName].cards.forEach(card => {
+        if (initialCards[card.id] === undefined) initialCards[card.id] = 0; 
+      });
+    });
+
+    try {
+      await setDoc(userDocRef, {
+        uid,
+        username: cleanName,
+        ingameName: cleanIngame,
+        gameTag: cleanTag,
+        avatarId: avatarId || 'pink_sailor',
+        cards: initialCards,
+        updatedAt: Date.now()
+      }, { merge: true });
+      
+      localStorage.setItem('stars_username', cleanName);
+      localStorage.setItem('stars_ingame', cleanIngame);
+      localStorage.setItem('stars_tag', cleanTag);
+      localStorage.setItem('stars_avatar', avatarId);
+      setIsEditingProfile(false);
+    } catch (e) {
+      console.error("Erro ao sincronizar utilizador:", e);
+    }
+  };
+
+  const handleUpdateCardCount = async (cardId, delta) => {
+    if (!user || !currentUserProfile) return;
+    const currentCount = currentUserProfile.cards?.[cardId] || 0;
+    const newCount = Math.max(0, currentCount + delta);
+    const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+    try {
+      await updateDoc(userDocRef, { [`cards.${cardId}`]: newCount, updatedAt: Date.now() });
+    } catch (e) {
+      showNotification("Não foi possível atualizar.", "error");
+    }
+  };
+
+  const handleSetCardCount = async (cardId, count) => {
+    if (!user || !currentUserProfile) return;
+    const value = Math.max(0, parseInt(count) || 0);
+    const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+    try {
+      await updateDoc(userDocRef, { [`cards.${cardId}`]: value, updatedAt: Date.now() });
+    } catch (e) {}
+  };
+
+  const getRepetitionsForCard = (cardId) => {
+    return Object.values(groupProfiles)
+      .filter(p => (p.cards?.[cardId] || 0) > 1)
+      .map(p => ({
+        username: p.username,
+        ingameName: p.ingameName,
+        gameTag: p.gameTag,
+        avatarId: p.avatarId || 'pink_sailor',
+        qty: p.cards[cardId] - 1
+      }));
+  };
+
+  const getMatches = () => {
+    const matches = [];
+    const uids = Object.keys(groupProfiles);
+    uids.forEach(donorUid => {
+      const donor = groupProfiles[donorUid];
+      uids.forEach(receiverUid => {
+        if (donorUid === receiverUid) return;
+        const receiver = groupProfiles[receiverUid];
+        Object.keys(ALBUMS_DATA).forEach(albumName => {
+          ALBUMS_DATA[albumName].cards.forEach(card => {
+            if ((donor.cards?.[card.id] || 0) > 1 && (receiver.cards?.[card.id] || 0) === 0) {
+              matches.push({
+                donor: donor.username,
+                donorIngame: donor.ingameName || donor.username,
+                donorTag: donor.gameTag || '',
+                donorAvatar: donor.avatarId || 'pink_sailor',
+                receiver: receiver.username,
+                cardName: card.name,
+                album: albumName,
+                stars: card.stars
+              });
+            }
+          });
+        });
+      });
+    });
+    return matches;
+  };
+
+  const getUserStats = (profile) => {
+    if (!profile || !profile.cards) return { owned: 0, total: 0, percent: 0, repeats: 0 };
+    let owned = 0, totalCards = 0, repeats = 0;
+    Object.keys(ALBUMS_DATA).forEach(albumName => {
+      ALBUMS_DATA[albumName].cards.forEach(card => {
+        totalCards++;
+        const qty = profile.cards[card.id] || 0;
+        if (qty > 0) owned++;
+        if (qty > 1) repeats += (qty - 1);
+      });
+    });
+    return { owned, total: totalCards, percent: Math.round((owned / totalCards) * 100), repeats };
+  };
+
+  const getUserAlbumProgress = (profile, albumName) => {
+    if (!profile || !profile.cards) return { owned: 0, total: 12, percent: 0 };
+    let owned = 0;
+    ALBUMS_DATA[albumName].cards.forEach(c => {
+      if ((profile.cards[c.id] || 0) > 0) owned++;
+    });
+    return { owned, total: 12, percent: Math.round((owned / 12) * 100) };
+  };
+
+  const getAvatarSvg = (id) => {
+    const found = AVATARS_LIST.find(a => a.id === id);
+    return found ? found.svg : AVATARS_LIST[0].svg;
+  };
+
+  const getAvatarColor = (id) => {
+    const found = AVATARS_LIST.find(a => a.id === id);
+    return found ? found.color : "from-pink-500 to-rose-600";
+  };
+
+  const matches = getMatches();
+  const sortedUsers = Object.values(groupProfiles).sort((a, b) => getUserStats(b).percent - getUserStats(a).percent);
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 pb-12 font-sans antialiased selection:bg-pink-500/40">
+      
+      {/* Estilo Geral de Neon e degrade inspirado nas imagens Sunday City */}
+      <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-purple-900/20 via-fuchsia-950/10 to-transparent pointer-events-none z-0"></div>
+      
+      {/* Cabeçalho Temático Customizado "BRG Brazilian Girls" */}
+      <header className="relative bg-gradient-to-b from-purple-950 via-slate-900 to-slate-950 border-b border-fuchsia-500/20 px-4 py-8 md:py-12 z-10 shadow-2xl">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-fuchsia-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl -ml-20 -mb-20 pointer-events-none"></div>
+        
+        {/* Onda decorativa do Rio de Janeiro */}
+        <div className="absolute inset-x-0 bottom-0 h-10 opacity-10 pointer-events-none overflow-hidden">
+          <svg className="w-full h-full" viewBox="0 0 1200 120" preserveAspectRatio="none">
+            <path d="M0,60 C150,110 350,10 500,60 C650,110 850,10 1000,60 C1150,110 1350,10 1500,60 L1500,120 L0,120 Z" fill="currentColor" className="text-fuchsia-500" />
+          </svg>
+        </div>
+
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative">
+          
+          {/* Logo e Estética BRG com Carro Clássico e Meninas */}
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="bg-gradient-to-r from-yellow-400 via-amber-400 to-amber-500 text-slate-950 font-black text-[10px] px-3 py-1 rounded-full shadow-lg tracking-wider uppercase animate-bounce">
+                🏆 BRG OFFICIAL SITE
+              </span>
+              <span className="text-fuchsia-400 text-xs font-bold tracking-widest uppercase">✨ Sunday City</span>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              
+              {/* MINIATURA CUSTOMIZADA: O Carro Vermelho Clássico sob o luar e fogos de artifício */}
+              <div className="relative w-28 h-20 rounded-xl overflow-hidden bg-slate-950 border border-fuchsia-500/40 shadow-2xl shrink-0 flex items-center justify-center">
+                {/* Céu noturno com estrelas/luar */}
+                <div className="absolute inset-0 bg-gradient-to-t from-purple-950 via-slate-950 to-indigo-950"></div>
+                {/* Lua brilhando */}
+                <div className="absolute top-2 right-4 w-4 h-4 bg-yellow-100 rounded-full blur-[1px]"></div>
+                {/* Partículas de Fogos de Artifício */}
+                <div className="absolute top-2 left-3 w-1 h-1 bg-pink-400 rounded-full animate-ping"></div>
+                <div className="absolute top-4 left-8 w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></div>
+                <div className="absolute top-1 right-8 w-1 h-1 bg-cyan-400 rounded-full animate-ping"></div>
+                
+                {/* Carro Conversível Vermelho (Ilustração Vetorial SVG Compacta) */}
+                <svg className="w-16 h-10 z-10 filter drop-shadow-[0_4px_5px_rgba(0,0,0,0.5)]" viewBox="0 0 100 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Bonequinhas dentro do Carro */}
+                  <circle cx="28" cy="24" r="5" fill="#f472b6" /> {/* Bonequinha Rosa */}
+                  <circle cx="38" cy="20" r="5" fill="#22d3ee" /> {/* Bonequinha Azul */}
+                  <circle cx="48" cy="22" r="5" fill="#facc15" /> {/* Bonequinha Loira */}
+                  <circle cx="58" cy="26" r="5" fill="#c084fc" /> {/* Bonequinha Roxa */}
+                  
+                  {/* Corpo do Conversível */}
+                  <path d="M12 40 L25 28 L68 28 L78 35 L85 40 L88 44 L80 48 L15 48 Z" fill="#dc2626" />
+                  <path d="M15 40 L24 38 L65 38 L78 40 Z" fill="#991b1b" />
+                  {/* Vidro Parabrisa */}
+                  <path d="M25 28 L35 15 L45 28 Z" fill="#e2e8f0" opacity="0.6" />
+                  {/* Rodas Cromadas */}
+                  <circle cx="28" cy="46" r="7" fill="#1e293b" />
+                  <circle cx="28" cy="46" r="4" fill="#cbd5e1" />
+                  <circle cx="68" cy="46" r="7" fill="#1e293b" />
+                  <circle cx="68" cy="46" r="4" fill="#cbd5e1" />
+                  {/* Detalhe Neon debaixo */}
+                  <line x1="20" y1="52" x2="76" y2="52" stroke="#ff007f" strokeWidth="2" strokeLinecap="round" className="animate-pulse" />
+                </svg>
+
+                {/* Tag Clã neon na miniatura */}
+                <span className="absolute bottom-1 right-2 text-[9px] font-black text-fuchsia-400 font-mono tracking-widest">BRG</span>
+              </div>
+
+              <div>
+                <h1 className="text-3xl md:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-fuchsia-400 to-purple-300">
+                  Brazilian Girls
+                </h1>
+                <p className="text-slate-300 text-xs md:text-sm font-medium mt-1">
+                  Painel de Trocas e Matchmaking oficial do Clã BRG.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Configuração do Perfil das Integrantes */}
+          <div className="bg-slate-900/90 border border-fuchsia-900/30 p-5 rounded-2xl w-full lg:w-auto lg:min-w-[355px] shadow-2xl backdrop-blur-md relative overflow-hidden ring-1 ring-white/10">
+            <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-yellow-400 to-fuchsia-500"></div>
+            {currentUserProfile && !isEditingProfile ? (
+              <div className="space-y-3 pl-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-fuchsia-400 font-bold uppercase tracking-widest">Minha Conta BRG</span>
+                  <button onClick={() => setIsEditingProfile(true)} className="text-[11px] text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded border border-slate-700/60 transition">
+                    ✏️ Editar
+                  </button>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  {/* Bonequinha selecionada (Renderizada em SVG) */}
+                  <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg border border-white/10">
+                    {getAvatarSvg(currentUserProfile.avatarId)}
+                  </div>
+                  <div>
+                    <div className="font-extrabold text-base text-white truncate">👤 {currentUserProfile.username}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">Nick no Jogo: <span className="text-yellow-400 font-bold">{currentUserProfile.ingameName || '-'}</span></div>
+                  </div>
+                </div>
+
+                <div>
+                  {currentUserProfile.gameTag && (
+                    <button onClick={() => copyToClipboard(currentUserProfile.gameTag)} className="text-[10px] bg-slate-950 hover:bg-slate-800 text-fuchsia-300 hover:text-fuchsia-250 font-mono px-2.5 py-1 rounded border border-slate-800 flex items-center gap-1.5 transition w-full justify-between">
+                      <span>Tag de Amigo: <span className="text-white font-bold">{currentUserProfile.gameTag}</span></span>
+                      <span>📋</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="pt-2 border-t border-slate-800/80">
+                  <div className="flex justify-between text-[11px] mb-1">
+                    <span className="text-slate-400">Progresso Geral</span>
+                    <span className="font-bold text-fuchsia-450">{getUserStats(currentUserProfile).percent}%</span>
+                  </div>
+                  <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
+                    <div className="bg-gradient-to-r from-yellow-400 via-fuchsia-500 to-purple-600 h-full rounded-full transition-all duration-500" style={{ width: `${getUserStats(currentUserProfile).percent}%` }}></div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3 pl-2">
+                <span className="text-[11px] text-fuchsia-400 font-bold uppercase tracking-wider block">Ficha de Inscrição BRG</span>
+                
+                {/* Seletor de Bonequinhas de Cadastro */}
+                <div>
+                  <label className="block text-[9px] text-slate-400 font-bold mb-1.5 uppercase">Escolha sua Bonequinha:</label>
+                  <div className="grid grid-cols-6 gap-1.5 max-h-24 overflow-y-auto p-1 bg-slate-950 rounded-lg border border-slate-800/85">
+                    {AVATARS_LIST.map((av) => {
+                      const isSelected = selectedAvatar === av.id;
+                      return (
+                        <button
+                          key={av.id}
+                          type="button"
+                          onClick={() => setSelectedAvatar(av.id)}
+                          title={av.label}
+                          className={`aspect-square rounded-lg overflow-hidden transition-all ${isSelected ? `scale-110 ring-2 ring-fuchsia-500` : 'hover:bg-slate-850 opacity-60'}`}
+                        >
+                          {av.svg}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <input 
+                  type="text" 
+                  value={usernameInput} 
+                  onChange={(e) => setUsernameInput(e.target.value)} 
+                  placeholder="Nome no WhatsApp / Grupo *" 
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-fuchsia-500 transition"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input 
+                    type="text" 
+                    value={ingameNameInput} 
+                    onChange={(e) => setIngameNameInput(e.target.value)} 
+                    placeholder="Nick no Jogo" 
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-fuchsia-500 transition"
+                  />
+                  <input 
+                    type="text" 
+                    value={gameTagInput} 
+                    onChange={(e) => setGameTagInput(e.target.value)} 
+                    placeholder="ID de Amigo (#...)" 
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-fuchsia-500 transition"
+                  />
+                </div>
+                <button onClick={() => handleRegisterUser(usernameInput, ingameNameInput, gameTagInput, selectedAvatar)} className="w-full bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 py-2 rounded-xl text-xs font-bold text-white transition shadow-lg shadow-fuchsia-650/20">
+                  {currentUserProfile ? "Salvar Alterações" : "Entrar no Clã BRG"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Grid Principal */}
+      <main className="max-w-7xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10">
+        
+        {/* Painel Esquerdo */}
+        <section className="lg:col-span-4 space-y-6">
+          
+          {/* Procura de Cartas com Neon Glow */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-md relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-fuchsia-500/5 rounded-full blur-xl"></div>
+            <h3 className="text-[11px] font-bold uppercase text-slate-300 mb-2 flex items-center gap-1.5">
+              <span className="text-fuchsia-400">🔍</span> Procurar Carta no Clã
+            </h3>
+            <input 
+              type="text"
+              placeholder="Ex: Teclado, Luvas, All Stars..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-fuchsia-500 transition"
+            />
+            {searchQuery && (
+              <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">
+                {Object.entries(ALBUMS_DATA)
+                  .flatMap(([alb, d]) => d.cards.map(c => ({...c, alb})))
+                  .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                  .map(c => (
+                    <div 
+                      key={c.id} 
+                      onClick={() => setInspectedCardRepetitions({ id: c.id, name: c.name })} 
+                      className="bg-slate-950 p-2.5 rounded-lg border border-slate-850 text-xs cursor-pointer hover:border-fuchsia-500 flex justify-between transition items-center"
+                    >
+                      <span className="font-semibold text-slate-200">{c.name}</span>
+                      <span className="text-[10px] bg-slate-900 px-2 py-0.5 rounded text-fuchsia-400">{c.alb}</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* Progresso das Integrantes */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-md">
+            <h3 className="text-[11px] font-bold uppercase text-slate-300 mb-3 flex justify-between items-center">
+              <span>📊 Progresso das Integrantes</span>
+              <span className="text-yellow-400 font-bold">{sortedUsers.length} Membros</span>
+            </h3>
+            <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+              {sortedUsers.map((p, idx) => {
+                const st = getUserStats(p);
+                return (
+                  <div 
+                    key={p.uid} 
+                    onClick={() => setSelectedUserToInspect(selectedUserToInspect?.uid === p.uid ? null : p)} 
+                    className={`p-3 rounded-xl text-xs border cursor-pointer transition ${selectedUserToInspect?.uid === p.uid ? 'bg-fuchsia-950/20 border-fuchsia-500' : 'bg-slate-950/40 border-slate-850 hover:bg-slate-800'}`}
+                  >
+                    <div className="flex justify-between items-center font-medium">
+                      <span className="truncate flex items-center gap-1.5">
+                        <span className="text-[11px] font-bold text-slate-400 w-4">{idx + 1}</span>
+                        
+                        {/* Bonequinha ao lado do nome no ranking */}
+                        <span className="w-6 h-6 shrink-0 rounded-md overflow-hidden">{getAvatarSvg(p.avatarId)}</span>
+                        
+                        <span className="font-bold text-white">{p.username}</span>
+                      </span>
+                      <span className="font-extrabold text-slate-300 bg-slate-900/80 px-2 py-0.5 rounded">{st.percent}%</span>
+                    </div>
+                    {selectedUserToInspect?.uid === p.uid && (
+                      <div className="mt-2 pt-2 border-t border-slate-800/80 space-y-1 text-slate-400 text-[10px] animate-in slide-in-from-top-1 duration-150">
+                        <div>Nome no Jogo: <span className="text-slate-200 font-semibold">{p.ingameName || '-'}</span></div>
+                        {p.gameTag && <div className="text-yellow-300 font-mono">Tag de Amigo: {p.gameTag}</div>}
+                        <div className="text-emerald-400 font-bold">🔥 {st.repeats} cartas para doar agora mesmo!</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Matches Rápidos BRG */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-md">
+            <h3 className="text-[11px] font-bold uppercase text-slate-300 mb-2 flex items-center gap-1.5">
+              <span className="text-yellow-400">🤝</span> Matches Rápidos BRG
+            </h3>
+            <div className="space-y-2 max-h-56 overflow-y-auto">
+              {matches.slice(0, 15).map((m, i) => (
+                <div key={i} className="bg-slate-950 p-3 rounded-xl border border-slate-850 text-[11px] space-y-2">
+                  <div className="text-slate-300 leading-relaxed flex items-center gap-2">
+                    <span className="w-6 h-6 shrink-0 rounded-md overflow-hidden">{getAvatarSvg(m.donorAvatar)}</span>
+                    <div>
+                      <strong className="text-emerald-400 font-bold">{m.donor}</strong> tem repetida de <strong className="text-white">"{m.cardName}"</strong> para doar a <strong className="text-fuchsia-400 font-bold">{m.receiver}</strong>.
+                    </div>
+                  </div>
+                  {m.donorTag && (
+                    <button 
+                      onClick={() => copyToClipboard(m.donorTag)} 
+                      className="bg-slate-900 hover:bg-slate-850 text-[10px] text-fuchsia-300 hover:text-white px-2 py-1 rounded-lg border border-slate-800 font-mono w-full text-left truncate flex justify-between items-center transition"
+                    >
+                      <span>Tag do dador: {m.donorTag}</span>
+                      <span className="text-[9px] bg-slate-950 px-1.5 py-0.5 rounded text-yellow-400 font-sans">Copiar 📋</span>
+                    </button>
+                  )}
+                </div>
+              ))}
+              {matches.length === 0 && <p className="text-xs text-slate-500 italic text-center py-4">Sem trocas fáceis de momento.</p>}
+            </div>
+          </div>
+        </section>
+
+        {/* Painel Direito */}
+        <section className="lg:col-span-8 space-y-4">
+          
+          {/* Seletor Deslizante Horizontal de Álbuns */}
+          <div className="bg-slate-900 border border-slate-850 rounded-2xl p-2.5 overflow-x-auto scrollbar-none flex gap-2 touch-pan-x shadow-xl">
+            {Object.keys(ALBUMS_DATA).map(alb => {
+              const isAct = activeAlbum === alb;
+              const prg = currentUserProfile ? getUserAlbumProgress(currentUserProfile, alb) : null;
+              return (
+                <button
+                  key={alb}
+                  onClick={() => {
+                    setActiveAlbum(alb);
+                    setFilterType("all");
+                  }}
+                  className={`px-4 py-3 rounded-xl font-black text-xs shrink-0 transition flex flex-col items-start ${isAct ? `bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white shadow-lg scale-[1.02]` : 'bg-slate-950 text-slate-400 hover:bg-slate-850 border border-slate-850/50'}`}
+                >
+                  <span className="tracking-wide">{alb}</span>
+                  {prg && <span className="text-[9px] opacity-80 font-normal mt-0.5">{prg.owned}/12 Concluídas</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Filtros */}
+          <div className="flex justify-between items-center bg-slate-900/40 p-2.5 rounded-xl border border-slate-850">
+            <span className="text-xs font-black px-1 text-slate-200">Álbum: <span className="text-fuchsia-400">{activeAlbum}</span></span>
+            <div className="flex gap-1.5 text-[11px]">
+              {['all', 'repeats', 'missing'].map(t => (
+                <button 
+                  key={t} 
+                  onClick={() => setFilterType(t)} 
+                  className={`px-3 py-1.5 rounded-lg font-bold transition ${filterType === t ? 'bg-fuchsia-600 text-white shadow-lg shadow-fuchsia-650/10' : 'bg-slate-950 text-slate-400 hover:text-white'}`}
+                >
+                  {t === 'all' ? 'Todas' : t === 'repeats' ? 'Repetidas' : 'Em Falta'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Grelha de Cartas */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 md:p-6 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl pointer-events-none"></div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4">
+              {ALBUMS_DATA[activeAlbum].cards
+                .filter(c => {
+                  if (!currentUserProfile) return true;
+                  const q = currentUserProfile.cards?.[c.id] || 0;
+                  if (filterType === 'repeats') return q > 1;
+                  if (filterType === 'missing') return q === 0;
+                  return true;
+                })
+                .map(card => {
+                  const qty = currentUserProfile ? (currentUserProfile.cards?.[card.id] || 0) : 0;
+                  const has = qty > 0;
+                  return (
+                    <div 
+                      key={card.id}
+                      onClick={() => setInspectedCardRepetitions({ id: card.id, name: card.name })}
+                      className={`relative aspect-[3/4] rounded-2xl border transition duration-250 flex flex-col justify-between p-3 cursor-pointer group hover:border-fuchsia-500 hover:shadow-lg hover:shadow-fuchsia-950/25 ${has ? 'bg-slate-850/90 border-slate-700 shadow-md ring-1 ring-white/5' : 'bg-slate-950/90 border-slate-900 opacity-30 grayscale'}`}
+                    >
+                      {qty > 1 && (
+                        <div className="absolute -top-1.5 -right-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-[10px] font-black px-2 py-0.5 rounded-lg shadow-md z-10">
+                          +{qty - 1}
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between items-center text-[9px] text-slate-400">
+                        <div className="text-yellow-400 font-mono">{'★'.repeat(card.stars)}</div>
+                        <span className="font-mono text-slate-500 font-bold">{card.id.toUpperCase()}</span>
+                      </div>
+
+                      <div className="text-center text-3xl my-2 filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.3)]">{card.icon || "✨"}</div>
+
+                      <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                        <p className="text-center font-bold text-[11px] text-slate-200 truncate group-hover:text-white">
+                          {card.name}
+                        </p>
+                        
+                        {currentUserProfile && (
+                          <div className="flex items-center justify-between bg-slate-950 rounded-lg p-0.5 border border-slate-800">
+                            <button 
+                              onClick={() => handleUpdateCardCount(card.id, -1)} 
+                              className="w-5 h-5 bg-slate-900 hover:bg-slate-800 text-slate-400 font-bold text-xs rounded active:scale-95 transition"
+                            >
+                              -
+                            </button>
+                            <input 
+                              type="number" 
+                              value={qty} 
+                              onChange={(e) => handleSetCardCount(card.id, e.target.value)} 
+                              className="w-6 bg-transparent text-center text-xs text-white focus:outline-none font-bold" 
+                            />
+                            <button 
+                              onClick={() => handleUpdateCardCount(card.id, 1)} 
+                              className="w-5 h-5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-bold text-xs rounded active:scale-95 transition"
+                            >
+                              +
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* POPUP: Detetive de Repetidas */}
+      {inspectedCardRepetitions && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900 border border-fuchsia-950/40 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in duration-150 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 to-fuchsia-500"></div>
+            <div className="flex justify-between items-start">
+              <div>
+                <h4 className="font-bold text-base text-white">Detetive de Repetidas BRG</h4>
+                <p className="text-xs text-fuchsia-400 font-medium mt-0.5">Carta: "{inspectedCardRepetitions.name}"</p>
+              </div>
+              <button onClick={() => setInspectedCardRepetitions(null)} className="text-slate-400 hover:text-white text-xs bg-slate-950 p-1.5 px-2.5 rounded-lg">✕</button>
+            </div>
+
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {getRepetitionsForCard(inspectedCardRepetitions.id).length === 0 ? (
+                <div className="text-center py-6 text-xs text-slate-500 italic">
+                  Nenhuma integrante marcou esta carta repetida no momento.
+                </div>
+              ) : (
+                getRepetitionsForCard(inspectedCardRepetitions.id).map((don, idx) => (
+                  <div key={idx} className="bg-slate-950 p-3 rounded-xl border border-slate-850 flex flex-col gap-1.5 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-emerald-400 flex items-center gap-1.5">
+                        <span className="w-6 h-6 shrink-0 rounded-md overflow-hidden">{getAvatarSvg(don.avatarId)}</span>
+                        <span>{don.username}</span>
+                      </span>
+                      <span className="bg-emerald-500/10 text-emerald-400 font-bold text-[10px] px-2.5 py-0.5 rounded-full">
+                        Sobra: {don.qty}
+                      </span>
+                    </div>
+                    <div className="text-slate-400 text-[11px]">No Jogo: <span className="text-white font-semibold">{don.ingameName || don.username}</span></div>
+                    {don.gameTag && (
+                      <button 
+                        onClick={() => {
+                          copyToClipboard(don.gameTag);
+                          setInspectedCardRepetitions(null);
+                        }}
+                        className="w-full bg-purple-900/30 hover:bg-purple-800/40 text-purple-300 font-mono text-[11px] py-1 px-2 rounded-lg border border-purple-800/60 mt-1 flex justify-between items-center transition"
+                      >
+                        <span>Tag: {don.gameTag}</span>
+                        <span>Copiar ID 📋</span>
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+            <button onClick={() => setInspectedCardRepetitions(null)} className="w-full bg-slate-950 hover:bg-slate-850 py-2.5 rounded-xl text-xs font-bold text-slate-400 transition">
+              Voltar ao Álbum
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Alerta popup */}
+      {notification && (
+        <div className="fixed bottom-4 right-4 bg-purple-900/90 border border-fuchsia-500 text-purple-100 px-4 py-2.5 rounded-xl text-xs font-bold shadow-2xl z-50 animate-bounce">
+          {notification.message}
+        </div>
+      )}
+    </div>
+  );
+}
